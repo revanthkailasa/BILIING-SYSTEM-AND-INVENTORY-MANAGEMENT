@@ -5,6 +5,7 @@
     { "src": "index.html", "use": "@vercel/static" }
   ],
   "routes": [
-    { "src": "/(.*)", "dest": "/index.html" }
+    { "src": "^/(.*\\.(js|css|png|jpg|jpeg|svg|webp|ico|json))$", "dest": "/$1" },
+    { "src": "^/(.*)$", "dest": "/index.html" }
   ]
 }
