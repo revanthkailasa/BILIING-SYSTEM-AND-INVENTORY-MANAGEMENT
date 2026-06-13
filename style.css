@@ -690,7 +690,7 @@ body {
 /* ==================== BILLING DESK TAB STYLES ==================== */
 .billing-container {
   display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
+  grid-template-columns: 0.4fr 0.6fr;
   gap: 1.5rem;
   flex-grow: 1;
   overflow: visible;
