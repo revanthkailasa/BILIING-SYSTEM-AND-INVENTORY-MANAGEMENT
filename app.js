@@ -339,6 +339,14 @@ function setupEventListeners() {
   document.getElementById("btn-print-invoice").addEventListener("click", () => {
     window.print();
   });
+  const btnAddInvoiceItem = document.getElementById("btn-add-invoice-item");
+  if (btnAddInvoiceItem) {
+    btnAddInvoiceItem.addEventListener("click", () => {
+      const overlay = document.getElementById("invoice-modal-overlay");
+      const invoiceId = overlay.dataset.currentInvoiceId;
+      if (invoiceId) addInvoiceItem(invoiceId);
+    });
+  }
   const btnCancelInvoice = document.getElementById("btn-cancel-invoice");
   if (btnCancelInvoice) {
     btnCancelInvoice.addEventListener("click", () => {
@@ -882,7 +890,10 @@ function showInvoicePreview(invoice) {
       <td class="text-center">${item.gstRate}%</td>
       <td class="text-right">${formatCurrency(item.totalAmount)}</td>
       <td class="text-right no-print">
-        ${invoice.status !== 'cancelled' ? `<button class="btn btn-outline btn-sm" onclick="removeInvoiceItem('${invoice.id}','${item.id}')" title="Remove Item">🗑️ Remove</button>` : ''}
+        ${invoice.status !== 'cancelled' ? `
+          <button class="btn btn-outline btn-sm" onclick="replaceInvoiceItem('${invoice.id}','${item.id}')" title="Replace Item">🔁 Replace</button>
+          <button class="btn btn-outline btn-sm" onclick="removeInvoiceItem('${invoice.id}','${item.id}')" title="Remove Item">🗑️ Remove</button>
+        ` : ''}
       </td>
     `;
     body.appendChild(row);
@@ -935,10 +946,137 @@ function removeInvoiceItem(invoiceId, itemId) {
     product.stock += removedItem.qty;
   }
 
-  // recalculate invoice totals
+  recalculateInvoiceTotals(invoice);
+  saveLocalState();
+  showInvoicePreview(invoice);
+  renderHistoryTable();
+}
+
+function addInvoiceItem(invoiceId) {
+  const invoice = state.invoices.find(inv => inv.id === invoiceId);
+  if (!invoice || invoice.status === 'cancelled') return;
+
+  const availableProducts = state.products.filter(p => p.stock > 0);
+  if (availableProducts.length === 0) {
+    alert('No products with available stock can be added to the invoice.');
+    return;
+  }
+
+  const choices = availableProducts.map((product, index) => {
+    return `${index + 1}. ${product.name} (${product.id}) - ₹${product.price.toFixed(2)} [Stock: ${product.stock}]`;
+  }).join('\n');
+
+  const selection = prompt(`Select an item to add by number:\n${choices}`);
+  const selectedIndex = parseInt(selection, 10) - 1;
+  if (isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= availableProducts.length) {
+    alert('Invalid selection. Please try again.');
+    return;
+  }
+
+  const selectedProduct = availableProducts[selectedIndex];
+  const qtyInput = prompt(`Enter quantity for '${selectedProduct.name}' (max ${selectedProduct.stock}):`, '1');
+  const quantity = parseInt(qtyInput, 10);
+  if (isNaN(quantity) || quantity <= 0 || quantity > selectedProduct.stock) {
+    alert('Invalid quantity. Please enter a number within available stock.');
+    return;
+  }
+
+  const existingItem = invoice.items.find(item => item.id === selectedProduct.id);
+  if (existingItem) {
+    existingItem.qty += quantity;
+  } else {
+    invoice.items.push({
+      id: selectedProduct.id,
+      name: selectedProduct.name,
+      price: selectedProduct.price,
+      qty: quantity,
+      gstRate: selectedProduct.gst,
+      gstAmount: 0,
+      taxableValue: 0,
+      totalAmount: 0
+    });
+  }
+
+  selectedProduct.stock -= quantity;
+  recalculateInvoiceTotals(invoice);
+  saveLocalState();
+  showInvoicePreview(invoice);
+  renderHistoryTable();
+}
+
+function replaceInvoiceItem(invoiceId, itemId) {
+  const invoice = state.invoices.find(inv => inv.id === invoiceId);
+  if (!invoice || invoice.status === 'cancelled') return;
+
+  const currentItem = invoice.items.find(item => item.id === itemId);
+  if (!currentItem) return;
+
+  const availableProducts = state.products.filter(p => p.stock > 0 || p.id === currentItem.id);
+  const choices = availableProducts.map((product, index) => {
+    const stockLabel = product.id === currentItem.id ? `(Current item stock ${product.stock + currentItem.qty})` : `Stock: ${product.stock}`;
+    return `${index + 1}. ${product.name} (${product.id}) - ₹${product.price.toFixed(2)} ${stockLabel}`;
+  }).join('\n');
+
+  const selection = prompt(`Select replacement item by number:\n${choices}`);
+  const selectedIndex = parseInt(selection, 10) - 1;
+  if (isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= availableProducts.length) {
+    alert('Invalid selection. Please try again.');
+    return;
+  }
+
+  const selectedProduct = availableProducts[selectedIndex];
+  const maxQty = selectedProduct.id === currentItem.id ? selectedProduct.stock + currentItem.qty : selectedProduct.stock;
+  const qtyInput = prompt(`Enter quantity for '${selectedProduct.name}' (max ${maxQty}):`, `${currentItem.qty}`);
+  const quantity = parseInt(qtyInput, 10);
+  if (isNaN(quantity) || quantity <= 0 || quantity > maxQty) {
+    alert('Invalid quantity. Please enter a number within available stock.');
+    return;
+  }
+
+  // restore stock for current item
+  const currentProduct = state.products.find(p => p.id === currentItem.id);
+  if (currentProduct) {
+    currentProduct.stock += currentItem.qty;
+  }
+
+  // decrease new product stock
+  const replacementProduct = state.products.find(p => p.id === selectedProduct.id);
+  if (replacementProduct) {
+    replacementProduct.stock -= quantity;
+  }
+
+  if (selectedProduct.id === currentItem.id) {
+    currentItem.qty = quantity;
+  } else {
+    // Remove current item, add or update replacement item
+    invoice.items = invoice.items.filter(item => item.id !== itemId);
+    const foundExisting = invoice.items.find(item => item.id === selectedProduct.id);
+    if (foundExisting) {
+      foundExisting.qty += quantity;
+    } else {
+      invoice.items.push({
+        id: selectedProduct.id,
+        name: selectedProduct.name,
+        price: selectedProduct.price,
+        qty: quantity,
+        gstRate: selectedProduct.gst,
+        gstAmount: 0,
+        taxableValue: 0,
+        totalAmount: 0
+      });
+    }
+  }
+
+  recalculateInvoiceTotals(invoice);
+  saveLocalState();
+  showInvoicePreview(invoice);
+  renderHistoryTable();
+}
+
+function recalculateInvoiceTotals(invoice) {
   invoice.subtotal = invoice.items.reduce((sum, item) => sum + item.price * item.qty, 0);
   invoice.discount = invoice.discount || 0;
-  const discountRatio = invoice.subtotal > 0 ? invoice.discount / (invoice.subtotal + removedItem.price * removedItem.qty) : 0;
+  const discountRatio = invoice.subtotal > 0 ? invoice.discount / invoice.subtotal : 0;
   let totalGst = 0;
   const taxBreakdown = {};
 
@@ -947,8 +1085,13 @@ function removeInvoiceItem(invoiceId, itemId) {
     const itemDiscountShare = itemGross * discountRatio;
     const itemTaxable = itemGross - itemDiscountShare;
     const itemGstAmt = itemTaxable * (item.gstRate / 100);
-    totalGst += itemGstAmt;
+    const itemTotal = itemTaxable + itemGstAmt;
 
+    item.gstAmount = itemGstAmt;
+    item.taxableValue = itemTaxable;
+    item.totalAmount = itemTotal;
+
+    totalGst += itemGstAmt;
     if (!taxBreakdown[item.gstRate]) {
       taxBreakdown[item.gstRate] = { taxable: 0, tax: 0 };
     }
@@ -959,10 +1102,6 @@ function removeInvoiceItem(invoiceId, itemId) {
   invoice.gstAmount = totalGst;
   invoice.grandTotal = invoice.subtotal - invoice.discount + totalGst;
   invoice.taxBreakdown = taxBreakdown;
-
-  saveLocalState();
-  showInvoicePreview(invoice);
-  renderHistoryTable();
 }
 
 function updateInvoiceModalStatus(invoice) {
