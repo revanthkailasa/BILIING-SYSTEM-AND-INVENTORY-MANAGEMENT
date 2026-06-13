@@ -51,6 +51,19 @@ let state = {
   editingProductId: null
 };
 
+// ==================== SECURITY / AUTH (REMOVED) ====================
+// Authentication and password management removed per configuration.
+// The app will run in a single-user "admin" mode by default.
+
+// Minimal secureApiCall passthrough (no auth headers)
+async function secureApiCall(url, options = {}) {
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers
+  };
+  return fetch(url, { ...options, headers });
+}
+
 // ==================== INITIALIZATION ====================
 document.addEventListener("DOMContentLoaded", async () => {
   await initStorage();
@@ -72,6 +85,33 @@ async function initStorage() {
   }
 
   await loadFirestoreData(savedProducts, savedInvoices);
+}
+
+// ==================== FIREBASE DIAGNOSTICS ====================
+// Attempt a lightweight write/read to Firestore to check connectivity and rules.
+async function testFirebaseConnectivity() {
+  const statusEl = document.getElementById('firebase-status');
+  if (!db) {
+    console.warn('Firestore not initialized');
+    if (statusEl) statusEl.innerText = 'Firebase: unavailable';
+    return;
+  }
+
+  try {
+    const diagRef = db.collection('diagnostics').doc('last_ping');
+    await diagRef.set({ ts: Date.now(), source: 'client' }, { merge: true });
+    const snap = await diagRef.get();
+    if (snap.exists) {
+      console.log('Firebase ping success:', snap.data());
+      if (statusEl) statusEl.innerText = 'Firebase: connected';
+    } else {
+      console.warn('Firebase ping wrote but read returned no doc');
+      if (statusEl) statusEl.innerText = 'Firebase: partial';
+    }
+  } catch (err) {
+    console.warn('Firebase connectivity test failed:', err);
+    if (statusEl) statusEl.innerText = 'Firebase: error';
+  }
 }
 
 async function loadFirestoreData(savedProducts, savedInvoices) {
@@ -165,10 +205,14 @@ function checkSession() {
   const appContainer = document.getElementById("app-container");
   const financeBtn = document.getElementById("finance-menu-btn");
 
+  // If no app container, nothing to do
+  if (!appContainer) return;
+
   if (state.currentUser) {
-    loginContainer.classList.add("hide");
+    if (loginContainer) loginContainer.classList.add("hide");
     appContainer.classList.remove("hide");
-    document.getElementById("logged-user-name").innerText = state.currentUser.displayName || state.currentUser;
+    const loggedNameEl = document.getElementById("logged-user-name");
+    if (loggedNameEl) loggedNameEl.innerText = state.currentUser.displayName || state.currentUser;
     if (financeBtn) {
       financeBtn.style.display = state.currentUser.role === "finance" ? "flex" : "none";
     }
@@ -176,8 +220,15 @@ function checkSession() {
     updateDashboardStats();
   } else {
     if (financeBtn) financeBtn.style.display = "none";
-    loginContainer.classList.remove("hide");
-    appContainer.classList.add("hide");
+    if (loginContainer) {
+      loginContainer.classList.remove("hide");
+      appContainer.classList.add("hide");
+    } else {
+      // No login UI present: keep app visible but clear user display
+      appContainer.classList.remove("hide");
+      const loggedNameEl = document.getElementById("logged-user-name");
+      if (loggedNameEl) loggedNameEl.innerText = "";
+    }
   }
 }
 
@@ -237,29 +288,24 @@ function setupEventListeners() {
     }
   });
 
-  // Login Form
-  document.getElementById("login-form").addEventListener("submit", (e) => {
-    e.preventDefault();
-    const user = document.getElementById("login-username").value.trim();
-    const pass = document.getElementById("login-password").value.trim();
-    const errorEl = document.getElementById("login-error");
+  // Default single-user admin mode (authentication removed)
+  state.currentUser = state.currentUser || { displayName: "Admin", role: "admin" };
+  sessionStorage.setItem("skt_session_user", JSON.stringify(state.currentUser));
+  checkSession();
 
-    if (user === "admin" && pass === "admin") {
-      state.currentUser = { displayName: "Administrator", role: "admin" };
+  const logoutBtn = document.getElementById("btn-logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      // Clear session but keep app usable in admin mode
+      state.currentUser = null;
+      sessionStorage.removeItem("skt_session_user");
+      localStorage.removeItem("skt_auth_token");
+      // Re-enable admin session immediately
+      state.currentUser = { displayName: "Admin", role: "admin" };
       sessionStorage.setItem("skt_session_user", JSON.stringify(state.currentUser));
-      errorEl.classList.add("hide");
       checkSession();
-    } else {
-      errorEl.classList.remove("hide");
-    }
-  });
-
-  // Logout
-  document.getElementById("btn-logout").addEventListener("click", () => {
-    state.currentUser = null;
-    sessionStorage.removeItem("skt_session_user");
-    checkSession();
-  });
+    });
+  }
 
   // Sidebar Tabs Navigation
   const menuButtons = document.querySelectorAll(".sidebar-menu .menu-item");
@@ -290,6 +336,14 @@ function setupEventListeners() {
   document.getElementById("btn-print-invoice").addEventListener("click", () => {
     window.print();
   });
+  const btnCancelInvoice = document.getElementById("btn-cancel-invoice");
+  if (btnCancelInvoice) {
+    btnCancelInvoice.addEventListener("click", () => {
+      const overlay = document.getElementById("invoice-modal-overlay");
+      const invoiceId = overlay.dataset.currentInvoiceId;
+      if (invoiceId) cancelInvoice(invoiceId);
+    });
+  }
 
   // --- Sales History View Handlers ---
   document.getElementById("search-history").addEventListener("input", renderHistoryTable);
@@ -788,6 +842,8 @@ async function checkoutCart() {
   document.getElementById("discount-val").value = 0;
   document.getElementById("payment-mode").value = "Cash";
 
+  invoiceObj.status = 'active';
+
   // Reload views
   recalculateCart();
   renderBillingProducts();
@@ -804,6 +860,7 @@ function showInvoicePreview(invoice) {
   document.getElementById("inv-cust-name").innerText = invoice.customer.name;
   document.getElementById("inv-cust-phone").innerText = invoice.customer.phone;
   document.getElementById("inv-pay-mode").innerText = invoice.paymentMode;
+  updateInvoiceModalStatus(invoice);
 
   // Items body
   const body = document.getElementById("inv-items-body");
@@ -849,7 +906,48 @@ function showInvoicePreview(invoice) {
   });
 
   // Open modal
+  document.getElementById("invoice-modal-overlay").dataset.currentInvoiceId = invoice.id;
   document.getElementById("invoice-modal-overlay").classList.remove("hide");
+}
+
+function updateInvoiceModalStatus(invoice) {
+  const statusEl = document.getElementById('inv-status');
+  if (!statusEl) return;
+  statusEl.innerText = invoice.status === 'cancelled' ? 'Cancelled' : 'Active';
+  statusEl.className = invoice.status === 'cancelled' ? 'text-danger' : 'text-success';
+}
+
+async function cancelInvoice(invoiceId) {
+  const invoice = state.invoices.find(inv => inv.id === invoiceId);
+  if (!invoice) return;
+  if (invoice.status === 'cancelled') {
+    alert('This invoice is already cancelled.');
+    return;
+  }
+
+  if (!confirm(`Are you sure you want to cancel invoice ${invoiceId}? This will restore stock quantities.`)) {
+    return;
+  }
+
+  // restore inventory quantities
+  invoice.items.forEach(item => {
+    const product = state.products.find(p => p.id === item.id);
+    if (product) {
+      product.stock += item.qty;
+    }
+  });
+
+  invoice.status = 'cancelled';
+  invoice.cancelledAt = new Date().toISOString();
+  invoice.cancelledBy = state.currentUser ? state.currentUser.displayName || state.currentUser : 'Admin';
+
+  await saveLocalState();
+  renderHistoryTable();
+
+  if (document.getElementById('invoice-modal-overlay').classList.contains('hide') === false) {
+    showInvoicePreview(invoice);
+    updateInvoiceModalStatus(invoice);
+  }
 }
 
 // ==================== SALES HISTORY ====================
@@ -861,6 +959,7 @@ function renderHistoryTable() {
   tbody.innerHTML = "";
 
   const filtered = state.invoices.filter(inv => {
+    if (!inv.status) inv.status = 'active';
     const matchText = inv.id.toLowerCase().includes(search) ||
       inv.customer.name.toLowerCase().includes(search) ||
       inv.customer.phone.includes(search);
@@ -874,7 +973,7 @@ function renderHistoryTable() {
   });
 
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="10" class="text-center text-muted">No invoices found matching current filters.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="11" class="text-center text-muted">No invoices found matching current filters.</td></tr>`;
     return;
   }
 
@@ -882,6 +981,9 @@ function renderHistoryTable() {
   const sorted = [...filtered].sort((a, b) => new Date(b.date) - new Date(a.date));
 
   sorted.forEach(inv => {
+    const statusLabel = inv.status === 'cancelled' ? 'Cancelled' : 'Active';
+    const statusClass = inv.status === 'cancelled' ? 'badge badge-danger' : 'badge badge-success';
+
     // Main invoice row
     const row = document.createElement("tr");
     row.className = "invoice-row-clickable";
@@ -896,8 +998,10 @@ function renderHistoryTable() {
       <td>${formatCurrency(inv.discount)}</td>
       <td>${formatCurrency(inv.gstAmount)}</td>
       <td><strong>${formatCurrency(inv.grandTotal)}</strong></td>
+      <td><span class="${statusClass}">${statusLabel}</span></td>
       <td>
         <button class="btn btn-outline btn-sm" onclick="reprintInvoice('${inv.id}')" title="View/Print Invoice">🖨️ Print</button>
+        <button class="btn btn-outline-danger btn-sm" onclick="cancelInvoice('${inv.id}')" title="Cancel Invoice" ${inv.status === 'cancelled' ? 'disabled' : ''}>🚫 Cancel</button>
       </td>
     `;
     tbody.appendChild(row);

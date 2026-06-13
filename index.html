@@ -17,47 +17,10 @@
   <div class="bg-glow bg-glow-1"></div>
   <div class="bg-glow bg-glow-2"></div>
 
-  <!-- ==================== LOGIN SCREEN ==================== -->
-  <div id="login-container" class="auth-wrapper">
-    <div class="auth-card">
-      <div class="auth-header">
-        <img src="skt_logo.png" alt="Sai Krishna Textiles Logo" class="brand-logo-img">
-        <h1>Sai Krishna Textiles</h1>
-        <p>Smart POS & Billing System</p>
-      </div>
-
-      <form id="login-form" class="auth-form">
-        <div class="form-group">
-          <label for="login-username">Username</label>
-          <div class="input-wrapper">
-            <span class="input-icon">👤</span>
-            <input type="text" id="login-username" placeholder="Enter username" required value="admin">
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label for="login-password">Password</label>
-          <div class="input-wrapper">
-            <span class="input-icon">🔒</span>
-            <input type="password" id="login-password" placeholder="Enter password" required value="admin">
-          </div>
-        </div>
-
-        <div class="auth-actions">
-          <button type="submit" class="btn btn-primary btn-block">Sign In</button>
-        </div>
-
-        <div id="login-error" class="error-msg hide">Invalid username or password!</div>
-      </form>
-
-      <div class="auth-footer">
-        <p>Default Login: <strong>admin</strong> / <strong>admin</strong></p>
-      </div>
-    </div>
-  </div>
+  <!-- Login removed — app runs in single-user admin mode -->
 
   <!-- ==================== MAIN APPLICATION ==================== -->
-  <div id="app-container" class="app-wrapper hide">
+  <div id="app-container" class="app-wrapper">
     
     <!-- SIDEBAR -->
     <aside class="sidebar">
@@ -506,6 +469,7 @@
                     <th>Discount</th>
                     <th>GST Amount</th>
                     <th>Net Total</th>
+                    <th>Status</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -626,8 +590,7 @@
     <div class="invoice-modal-card">
       <div class="modal-header-actions no-print">
         <button id="btn-print-invoice" class="btn btn-primary">🖨️ Print Invoice</button>
-        <button id="btn-close-invoice" class="btn btn-outline">❌ Close</button>
-      </div>
+        <button id="btn-cancel-invoice" class="btn btn-outline-danger">🚫 Cancel Invoice</button>
 
       <!-- INVOICE TEMPLATE (Optimized for Printing) -->
       <div class="invoice-print-area" id="invoice-print-area">
@@ -654,6 +617,7 @@
             <p><span id="inv-cust-name">Walk-in Customer</span></p>
             <p>Phone: <span id="inv-cust-phone">N/A</span></p>
             <p>Payment: <span id="inv-pay-mode">Cash</span></p>
+            <p><strong>Status:</strong> <span id="inv-status">Active</span></p>
           </div>
         </div>
 
