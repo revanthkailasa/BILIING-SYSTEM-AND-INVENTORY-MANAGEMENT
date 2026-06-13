@@ -235,10 +235,13 @@ function checkSession() {
 // ==================== CLOCK & HELPER UTILS ====================
 function startClock() {
   const clockEl = document.getElementById("live-clock");
-  setInterval(() => {
+  if (!clockEl) return;
+  const update = () => {
     const now = new Date();
     clockEl.innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  }, 1000);
+  };
+  update();
+  setInterval(update, 1000);
 }
 
 // Format INR currency
@@ -875,6 +878,9 @@ function showInvoicePreview(invoice) {
       <td class="text-center">${item.qty}</td>
       <td class="text-center">${item.gstRate}%</td>
       <td class="text-right">${formatCurrency(item.totalAmount)}</td>
+      <td class="text-right no-print">
+        ${invoice.status !== 'cancelled' ? `<button class="btn btn-outline btn-sm" onclick="removeInvoiceItem('${invoice.id}','${item.id}')" title="Remove Item">🗑️ Remove</button>` : ''}
+      </td>
     `;
     body.appendChild(row);
   });
@@ -908,6 +914,52 @@ function showInvoicePreview(invoice) {
   // Open modal
   document.getElementById("invoice-modal-overlay").dataset.currentInvoiceId = invoice.id;
   document.getElementById("invoice-modal-overlay").classList.remove("hide");
+}
+
+function removeInvoiceItem(invoiceId, itemId) {
+  const invoice = state.invoices.find(inv => inv.id === invoiceId);
+  if (!invoice || invoice.status === 'cancelled') return;
+
+  const itemIndex = invoice.items.findIndex(item => item.id === itemId);
+  if (itemIndex === -1) return;
+
+  const removedItem = invoice.items[itemIndex];
+  invoice.items.splice(itemIndex, 1);
+
+  // restore stock for the removed item
+  const product = state.products.find(p => p.id === removedItem.id);
+  if (product) {
+    product.stock += removedItem.qty;
+  }
+
+  // recalculate invoice totals
+  invoice.subtotal = invoice.items.reduce((sum, item) => sum + item.price * item.qty, 0);
+  invoice.discount = invoice.discount || 0;
+  const discountRatio = invoice.subtotal > 0 ? invoice.discount / (invoice.subtotal + removedItem.price * removedItem.qty) : 0;
+  let totalGst = 0;
+  const taxBreakdown = {};
+
+  invoice.items.forEach(item => {
+    const itemGross = item.price * item.qty;
+    const itemDiscountShare = itemGross * discountRatio;
+    const itemTaxable = itemGross - itemDiscountShare;
+    const itemGstAmt = itemTaxable * (item.gstRate / 100);
+    totalGst += itemGstAmt;
+
+    if (!taxBreakdown[item.gstRate]) {
+      taxBreakdown[item.gstRate] = { taxable: 0, tax: 0 };
+    }
+    taxBreakdown[item.gstRate].taxable += itemTaxable;
+    taxBreakdown[item.gstRate].tax += itemGstAmt;
+  });
+
+  invoice.gstAmount = totalGst;
+  invoice.grandTotal = invoice.subtotal - invoice.discount + totalGst;
+  invoice.taxBreakdown = taxBreakdown;
+
+  saveLocalState();
+  showInvoicePreview(invoice);
+  renderHistoryTable();
 }
 
 function updateInvoiceModalStatus(invoice) {
