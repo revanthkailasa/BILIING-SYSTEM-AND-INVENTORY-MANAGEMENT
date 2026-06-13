@@ -850,6 +850,9 @@ async function checkoutCart() {
   // Reload views
   recalculateCart();
   renderBillingProducts();
+  renderInventoryTable();
+  renderHistoryTable();
+  updateDashboardStats();
 
   // Show Invoice preview
   showInvoicePreview(invoiceObj);
@@ -1053,6 +1056,7 @@ function renderHistoryTable() {
       <td><span class="${statusClass}">${statusLabel}</span></td>
       <td>
         <button class="btn btn-outline btn-sm" onclick="reprintInvoice('${inv.id}')" title="View/Print Invoice">🖨️ Print</button>
+        <button class="btn btn-secondary btn-sm" onclick="modifyInvoice('${inv.id}')" title="Modify Invoice" ${inv.status === 'cancelled' ? 'disabled' : ''}>✏️ Modify</button>
         <button class="btn btn-outline-danger btn-sm" onclick="cancelInvoice('${inv.id}')" title="Cancel Invoice" ${inv.status === 'cancelled' ? 'disabled' : ''}>🚫 Cancel</button>
       </td>
     `;
@@ -1126,6 +1130,16 @@ function reprintInvoice(invoiceId) {
   if (inv) {
     showInvoicePreview(inv);
   }
+}
+
+function modifyInvoice(invoiceId) {
+  const inv = state.invoices.find(i => i.id === invoiceId);
+  if (!inv) return;
+  if (inv.status === 'cancelled') {
+    alert('Cancelled invoices cannot be modified.');
+    return;
+  }
+  showInvoicePreview(inv);
 }
 
 // ==================== REPORTS: Calculation & Rendering ====================
@@ -1504,8 +1518,11 @@ window.switchTab = switchTab;
 window.updateCartQty = updateCartQty;
 window.removeFromCart = removeFromCart;
 window.reprintInvoice = reprintInvoice;
+window.modifyInvoice = modifyInvoice;
 window.editProduct = editProduct;
 window.deleteProduct = deleteProduct;
+window.cancelInvoice = cancelInvoice;
+window.removeInvoiceItem = removeInvoiceItem;
 
 // Toggle invoice detail row expand/collapse
 function toggleInvoiceDetail(invoiceId) {

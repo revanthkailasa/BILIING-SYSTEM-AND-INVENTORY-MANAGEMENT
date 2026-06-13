@@ -383,7 +383,12 @@
               <div class="panel billing-cart-panel">
                 <div class="panel-header flex-between">
                   <h3>Shopping Cart</h3>
-                  <button id="btn-clear-cart" class="btn btn-sm btn-outline-danger">Clear Cart</button>
+                  <div class="cart-header-actions">
+                    <button id="btn-checkout" class="btn btn-primary btn-sm" disabled>
+                      Generate Invoice & Print
+                    </button>
+                    <button id="btn-clear-cart" class="btn btn-sm btn-outline-danger">Clear Cart</button>
+                  </div>
                 </div>
                 
                 <div class="cart-table-wrapper">
@@ -433,11 +438,6 @@
                   </div>
                 </div>
 
-                <div class="cart-actions-row">
-                  <button id="btn-checkout" class="btn btn-primary btn-block btn-lg" disabled>
-                    Generate Invoice & Print
-                  </button>
-                </div>
               </div>
             </div>
 
@@ -470,7 +470,7 @@
                     <th>GST Amount</th>
                     <th>Net Total</th>
                     <th>Status</th>
-                    <th>Actions</th>
+                    <th>Actions / Bill Modification</th>
                   </tr>
                 </thead>
                 <tbody id="history-table-body">
