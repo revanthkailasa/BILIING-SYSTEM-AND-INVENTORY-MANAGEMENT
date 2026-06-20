@@ -4,45 +4,25 @@ const DEFAULT_PRODUCTS = [
   { id: "PROD-1001", name: "Kanchipuram Silk Saree - Premium", category: "Saree", price: 7500.00, cost: 4500.00, gst: 12, stock: 15 },
   { id: "PROD-1002", name: "Banarasi Georgette Saree", category: "Saree", price: 4200.00, cost: 2520.00, gst: 12, stock: 20 },
   { id: "PROD-1003", name: "Dailywear Cotton Saree - Printed", category: "Saree", price: 850.00, cost: 510.00, gst: 5, stock: 45 },
-  { id: "PROD-1004", name: "Chiffon Partywear Saree", category: "Saree", price: 1800.00, cost: 1080.00, gst: 5, stock: 25 },
-
-  // Category: Suits & Dress Materials
-  { id: "PROD-2001", name: "Chanderi Cotton Suit Material Set", category: "Suits & Dress Materials", price: 1250.00, cost: 750.00, gst: 5, stock: 30 },
-  { id: "PROD-2002", name: "Anarkali Designer Kurti - Silk", category: "Suits & Dress Materials", price: 2400.00, cost: 1440.00, gst: 12, stock: 12 },
-  { id: "PROD-2003", name: "Bandhani Dress Material Combo", category: "Suits & Dress Materials", price: 950.00, cost: 570.00, gst: 5, stock: 40 },
-
-  // Category: Mens Wear
-  { id: "PROD-3001", name: "Pure Linen Slimfit Shirt", category: "Mens Wear", price: 1650.00, cost: 990.00, gst: 5, stock: 22 },
-  { id: "PROD-3002", name: "Premium Cotton Dhoti - Gold Border", category: "Mens Wear", price: 750.00, cost: 450.00, gst: 5, stock: 50 },
-  { id: "PROD-3003", name: "Silk Blend Partywear Kurta", category: "Mens Wear", price: 2100.00, cost: 1260.00, gst: 12, stock: 18 },
-
-  // Category: Kids Wear
-  { id: "PROD-4001", name: "Kids Pattu Langa Jacket Set", category: "Kids Wear", price: 1450.00, cost: 870.00, gst: 5, stock: 10 },
-  { id: "PROD-4002", name: "Boys Cotton Kurta Pyjama Set", category: "Kids Wear", price: 890.00, cost: 534.00, gst: 5, stock: 25 },
-
-  // Category: Fabrics
-  { id: "PROD-5001", name: "Pure Raw Silk Fabric", category: "Fabrics (per meter)", price: 650.00, cost: 390.00, gst: 12, stock: 120 },
-  { id: "PROD-5002", name: "Organic Block-Print Cotton Fabric", category: "Fabrics (per meter)", price: 180.00, cost: 108.00, gst: 5, stock: 200 },
-  { id: "PROD-5003", name: "Premium Designer Velvet Fabric", category: "Fabrics (per meter)", price: 450.00, cost: 270.00, gst: 12, stock: 85 }
+  { id: "PROD-1004", name: "Chiffon Partywear Saree", category: "Saree", price: 1800.00, cost: 1080.00, gst: 5, stock: 25 }
 ];
 
-// ==================== FIREBASE SETUP ====================
-
- const firebaseConfig = {
-  apiKey: "AIzaSyC5oxAA9fPYpAU3-Res4ktJxWZ6qkYkr-Q",
-  authDomain: "billingsystemandinventorysyste.firebaseapp.com",
-  projectId: "billingsystemandinventorysyste",
-  storageBucket: "billingsystemandinventorysyste.firebasestorage.app",
-  messagingSenderId: "865267100671",
-  appId: "1:865267100671:web:a266c30e8e14683bcf55ca",
-  measurementId: "G-LXPKNGK5FD"
+// ==================== SECURITY / AUTH ====================
+const DEFAULT_AUTH_USERS = {
+  admin: {
+    username: 'admin',
+    displayName: 'Administrator',
+    role: 'admin',
+    passwordHash: 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7'
+  }
 };
- 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
 
+let AUTH_USERS = { ...DEFAULT_AUTH_USERS };
+let credentialsEncrypted = false;
+let credentialsUnlocked = false;
+let storedEncryptedPayload = null; // holds encrypted JSON when present
+let pendingLoginAttempt = null;
 
-// ==================== APP STATE MANAGER ====================
 let state = {
   currentUser: null,
   products: [],
@@ -51,9 +31,187 @@ let state = {
   editingProductId: null
 };
 
-// ==================== SECURITY / AUTH (REMOVED) ====================
-// Authentication and password management removed per configuration.
-// The app will run in a single-user "admin" mode by default.
+async function loadStoredCredentials() {
+  try {
+    const payload = await loadFromIndexedDB();
+    if (payload) {
+      credentialsEncrypted = true;
+      storedEncryptedPayload = payload;
+      AUTH_USERS = {};
+      try { localStorage.removeItem('skt_admin_credentials_enc'); } catch (e) {}
+      return;
+    }
+  } catch (err) {
+    console.warn('IndexedDB load failed, falling back to localStorage');
+  }
+
+  const enc = localStorage.getItem('skt_admin_credentials_enc');
+  if (enc) {
+    try {
+      storedEncryptedPayload = JSON.parse(enc);
+      credentialsEncrypted = true;
+      AUTH_USERS = {};
+      return;
+    } catch (e) {
+      console.warn('Invalid encrypted credential payload in localStorage, clearing stale data');
+      try { localStorage.removeItem('skt_admin_credentials_enc'); } catch (err) {}
+    }
+  }
+
+  const stored = localStorage.getItem('skt_admin_credentials');
+  if (stored) {
+    try {
+      AUTH_USERS = JSON.parse(stored);
+    } catch (e) {
+      console.warn('Invalid credential payload in localStorage, clearing stale data');
+      try { localStorage.removeItem('skt_admin_credentials'); } catch (err) {}
+      AUTH_USERS = { ...DEFAULT_AUTH_USERS };
+    }
+  }
+}
+
+// IndexedDB credential storage helpers
+async function openCredentialsDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('skt_credentials_db', 1);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('credentials')) db.createObjectStore('credentials');
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function saveToIndexedDB(payload) {
+  const db = await openCredentialsDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('credentials', 'readwrite');
+    const store = tx.objectStore('credentials');
+    const req = store.put(payload, 'admin_credentials');
+    req.onerror = () => reject(req.error);
+    tx.oncomplete = () => resolve();
+  });
+}
+
+async function loadFromIndexedDB() {
+  const db = await openCredentialsDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('credentials', 'readonly');
+    const store = tx.objectStore('credentials');
+    const req = store.get('admin_credentials');
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function clearFromIndexedDB() {
+  const db = await openCredentialsDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('credentials', 'readwrite');
+    const store = tx.objectStore('credentials');
+    const req = store.delete('admin_credentials');
+    req.onerror = () => reject(req.error);
+    tx.oncomplete = () => resolve();
+  });
+}
+
+function saveCredentialsToStorage() {
+  try { localStorage.removeItem('skt_admin_credentials_enc'); } catch (e) {}
+  localStorage.setItem('skt_admin_credentials', JSON.stringify(AUTH_USERS));
+}
+
+async function saveEncryptedCredentials(payload) {
+  try {
+    await saveToIndexedDB(payload);
+    try { localStorage.removeItem('skt_admin_credentials'); } catch (e) {}
+    try { localStorage.removeItem('skt_admin_credentials_enc'); } catch (e) {}
+    credentialsEncrypted = true;
+    credentialsUnlocked = false;
+    storedEncryptedPayload = payload;
+  } catch (err) {
+    console.error('Failed to save encrypted credentials:', err);
+    throw err;
+  }
+}
+
+async function clearEncryptedCredentials() {
+  try {
+    await clearFromIndexedDB();
+    try { localStorage.removeItem('skt_admin_credentials_enc'); } catch (e) {}
+    credentialsEncrypted = false;
+    storedEncryptedPayload = null;
+  } catch (err) {
+    console.error('Failed to clear credentials:', err);
+  }
+}
+
+// Helpers: hex/arraybuffer conversions
+function bufToHex(buffer) {
+  return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+function hexToBuf(hex) {
+  const bytes = new Uint8Array(hex.match(/.{1,2}/g).map(b => parseInt(b, 16)));
+  return bytes.buffer;
+}
+
+async function deriveKeyFromPassword(pass, saltHex) {
+  const enc = new TextEncoder();
+  const passKey = enc.encode(pass);
+  const salt = saltHex ? new Uint8Array(saltHex.match(/.{1,2}/g).map(h => parseInt(h, 16))) : crypto.getRandomValues(new Uint8Array(16));
+  const keyMaterial = await crypto.subtle.importKey('raw', passKey, { name: 'PBKDF2' }, false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: salt, iterations: 150000, hash: 'SHA-256' },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+  return { key, saltHex: bufToHex(salt) };
+}
+
+async function encryptObject(obj, pass) {
+  const data = new TextEncoder().encode(JSON.stringify(obj));
+  const { key, saltHex } = await deriveKeyFromPassword(pass);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, data);
+  return { salt: saltHex, iv: bufToHex(iv), data: bufToHex(ct) };
+}
+
+async function decryptObject(payload, pass) {
+  try {
+    const { salt, iv, data } = payload;
+    const { key } = await deriveKeyFromPassword(pass, salt);
+    const plainBuf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: new Uint8Array(iv.match(/.{1,2}/g).map(h => parseInt(h, 16))) }, key, hexToBuf(data));
+    const text = new TextDecoder().decode(plainBuf);
+    return JSON.parse(text);
+  } catch (err) {
+    throw new Error('Decryption failed');
+  }
+}
+
+async function sha256Hash(text) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(text);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function showLoginError(message) {
+  const errorEl = document.getElementById('login-error');
+  if (errorEl) {
+    errorEl.innerText = message;
+    errorEl.classList.remove('hide');
+  }
+}
+
+function clearLoginError() {
+  const errorEl = document.getElementById('login-error');
+  if (errorEl) {
+    errorEl.innerText = '';
+    errorEl.classList.add('hide');
+  }
+}
 
 // Minimal secureApiCall passthrough (no auth headers)
 async function secureApiCall(url, options = {}) {
@@ -66,7 +224,14 @@ async function secureApiCall(url, options = {}) {
 
 // ==================== INITIALIZATION ====================
 document.addEventListener("DOMContentLoaded", async () => {
+  await loadStoredCredentials();
   await initStorage();
+
+  if (credentialsEncrypted && !credentialsUnlocked) {
+    const unlockModal = document.getElementById('unlock-modal');
+    if (unlockModal) unlockModal.classList.remove('hide');
+  }
+
   checkSession();
   setupEventListeners();
   startClock();
@@ -91,7 +256,7 @@ async function initStorage() {
 // Attempt a lightweight write/read to Firestore to check connectivity and rules.
 async function testFirebaseConnectivity() {
   const statusEl = document.getElementById('firebase-status');
-  if (!db) {
+  if (typeof db === 'undefined' || !db) {
     console.warn('Firestore not initialized');
     if (statusEl) statusEl.innerText = 'Firebase: unavailable';
     return;
@@ -116,6 +281,10 @@ async function testFirebaseConnectivity() {
 
 async function loadFirestoreData(savedProducts, savedInvoices) {
   try {
+    if (typeof db === 'undefined' || !db) {
+      throw new Error('Firestore is not configured');
+    }
+
     const productsSnap = await db.collection("products").get();
     if (!productsSnap.empty) {
       state.products = productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -182,6 +351,9 @@ async function syncFirestoreState() {
 }
 
 async function saveProductsToFirebase() {
+  if (typeof db === 'undefined' || !db) {
+    throw new Error('Firestore is not configured');
+  }
   const batch = db.batch();
   state.products.forEach(product => {
     const docRef = db.collection("products").doc(product.id);
@@ -191,6 +363,9 @@ async function saveProductsToFirebase() {
 }
 
 async function saveInvoicesToFirebase() {
+  if (typeof db === 'undefined' || !db) {
+    throw new Error('Firestore is not configured');
+  }
   const batch = db.batch();
   state.invoices.forEach(invoice => {
     const docRef = db.collection("invoices").doc(invoice.id);
@@ -203,7 +378,6 @@ async function saveInvoicesToFirebase() {
 function checkSession() {
   const loginContainer = document.getElementById("login-container");
   const appContainer = document.getElementById("app-container");
-  const financeBtn = document.getElementById("finance-menu-btn");
 
   // If no app container, nothing to do
   if (!appContainer) return;
@@ -213,13 +387,9 @@ function checkSession() {
     appContainer.classList.remove("hide");
     const loggedNameEl = document.getElementById("logged-user-name");
     if (loggedNameEl) loggedNameEl.innerText = state.currentUser.displayName || state.currentUser;
-    if (financeBtn) {
-      financeBtn.style.display = state.currentUser.role === "finance" ? "flex" : "none";
-    }
     switchTab("dashboard");
     updateDashboardStats();
   } else {
-    if (financeBtn) financeBtn.style.display = "none";
     if (loginContainer) {
       loginContainer.classList.remove("hide");
       appContainer.classList.add("hide");
@@ -275,6 +445,21 @@ function generateInvoiceId() {
 
 // ==================== EVENT LISTENERS SETUP ====================
 function setupEventListeners() {
+  // Toggle Password Visibility (professional label)
+  document.querySelectorAll(".toggle-password").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      const targetId = btn.getAttribute("data-target");
+      const input = document.getElementById(targetId);
+      if (input) {
+        const isPassword = input.type === "password";
+        input.type = isPassword ? "text" : "password";
+        const txt = btn.querySelector('.toggle-text');
+        if (txt) txt.innerText = isPassword ? 'Hide' : 'Show';
+      }
+    });
+  });
+
   // Theme Toggle
   document.getElementById("theme-toggle").addEventListener("click", () => {
     const body = document.body;
@@ -291,22 +476,203 @@ function setupEventListeners() {
     }
   });
 
-  // Default single-user admin mode (authentication removed)
-  state.currentUser = state.currentUser || { displayName: "Admin", role: "admin" };
-  sessionStorage.setItem("skt_session_user", JSON.stringify(state.currentUser));
   checkSession();
+
+  const loginForm = document.getElementById("login-form");
+  if (loginForm) {
+    loginForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      clearLoginError();
+
+      const usernameInput = document.getElementById("login-username");
+      const passwordInput = document.getElementById("login-password");
+      const username = usernameInput.value.trim().toLowerCase();
+      const password = passwordInput.value;
+
+      // If credentials are encrypted and not yet unlocked, prompt for master passphrase
+      if (credentialsEncrypted && !credentialsUnlocked) {
+        pendingLoginAttempt = { username, password };
+        const unlockModal = document.getElementById('unlock-modal');
+        if (unlockModal) unlockModal.classList.remove('hide');
+        return;
+      }
+
+      const userRecord = AUTH_USERS[username];
+      if (!userRecord) {
+        showLoginError("Invalid username or password.");
+        return;
+      }
+
+      const hashedPassword = await sha256Hash(password);
+      if (hashedPassword !== userRecord.passwordHash) {
+        showLoginError("Invalid username or password.");
+        return;
+      }
+
+      state.currentUser = {
+        username: userRecord.username,
+        displayName: userRecord.displayName,
+        role: userRecord.role
+      };
+      sessionStorage.setItem("skt_session_user", JSON.stringify(state.currentUser));
+      passwordInput.value = "";
+      clearLoginError();
+      checkSession();
+    });
+  }
 
   const logoutBtn = document.getElementById("btn-logout");
   if (logoutBtn) {
     logoutBtn.addEventListener("click", () => {
-      // Clear session but keep app usable in admin mode
       state.currentUser = null;
       sessionStorage.removeItem("skt_session_user");
-      localStorage.removeItem("skt_auth_token");
-      // Re-enable admin session immediately
-      state.currentUser = { displayName: "Admin", role: "admin" };
-      sessionStorage.setItem("skt_session_user", JSON.stringify(state.currentUser));
       checkSession();
+    });
+  }
+
+  // Settings modal handlers
+  const settingsBtn = document.getElementById("btn-settings");
+  const settingsModal = document.getElementById("settings-modal");
+  const settingsForm = document.getElementById("settings-form");
+  const closeSettingsBtn = document.getElementById("btn-close-settings");
+  const cancelSettingsBtn = document.getElementById("btn-cancel-settings");
+  const settingsError = document.getElementById("settings-error");
+
+  if (settingsBtn) {
+    settingsBtn.addEventListener("click", () => {
+      if (state.currentUser) {
+        settingsModal.classList.remove("hide");
+        settingsError.classList.add("hide");
+        settingsForm.reset();
+      }
+    });
+  }
+
+  if (closeSettingsBtn) {
+    closeSettingsBtn.addEventListener("click", () => {
+      settingsModal.classList.add("hide");
+    });
+  }
+
+  if (cancelSettingsBtn) {
+    cancelSettingsBtn.addEventListener("click", () => {
+      settingsModal.classList.add("hide");
+    });
+  }
+
+  if (settingsForm) {
+    settingsForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const newUsername = document.getElementById("settings-new-username").value.trim().toLowerCase();
+      const newPassword = document.getElementById("settings-new-password").value;
+      const confirmPassword = document.getElementById("settings-confirm-password").value;
+      const secureToggle = document.getElementById('secure-storage-toggle');
+
+      if (!newUsername || !newPassword) {
+        settingsError.innerText = "Please fill in all fields.";
+        settingsError.classList.remove("hide");
+        return;
+      }
+
+      if (newPassword.length < 6) {
+        settingsError.innerText = "Password must be at least 6 characters.";
+        settingsError.classList.remove("hide");
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        settingsError.innerText = "Passwords do not match.";
+        settingsError.classList.remove("hide");
+        return;
+      }
+
+      const newPasswordHash = await sha256Hash(newPassword);
+      // Remove old admin key and add new keyed record
+      delete AUTH_USERS.admin;
+      AUTH_USERS[newUsername] = {
+        username: newUsername,
+        displayName: 'Administrator',
+        role: 'admin',
+        passwordHash: newPasswordHash
+      };
+
+      // If user enabled secure storage, encrypt credentials with provided passphrase
+      if (secureToggle && secureToggle.checked) {
+        const pass = document.getElementById('secure-pass').value;
+        const passConfirm = document.getElementById('secure-pass-confirm').value;
+        if (!pass || pass.length < 6) {
+          settingsError.innerText = 'Master passphrase required (min 6 chars)';
+          settingsError.classList.remove('hide');
+          return;
+        }
+        if (pass !== passConfirm) {
+          settingsError.innerText = 'Master passphrase confirmation does not match';
+          settingsError.classList.remove('hide');
+          return;
+        }
+        try {
+          const payload = await encryptObject(AUTH_USERS, pass);
+          saveEncryptedCredentials(payload);
+        } catch (err) {
+          settingsError.innerText = 'Failed to enable secure storage';
+          settingsError.classList.remove('hide');
+          return;
+        }
+      } else {
+        // disable encrypted storage if present
+        clearEncryptedCredentials();
+        saveCredentialsToStorage();
+      }
+
+      settingsError.classList.add("hide");
+      alert(`Credentials updated successfully!\n\nNew login:\nUsername: ${newUsername}\n\nYou will be logged out. Please log in with your new credentials.`);
+      state.currentUser = null;
+      sessionStorage.removeItem("skt_session_user");
+      settingsModal.classList.add("hide");
+      checkSession();
+    });
+  }
+
+  // Secure storage toggle reveal
+  const secureToggleEl = document.getElementById('secure-storage-toggle');
+  const securePassfields = document.getElementById('secure-passfields');
+  if (secureToggleEl && securePassfields) {
+    secureToggleEl.addEventListener('change', () => {
+      if (secureToggleEl.checked) securePassfields.classList.remove('hide');
+      else securePassfields.classList.add('hide');
+    });
+  }
+
+  // Unlock modal handlers
+  const unlockModal = document.getElementById('unlock-modal');
+  const btnUnlock = document.getElementById('btn-unlock');
+  const btnUnlockCancel = document.getElementById('btn-unlock-cancel');
+  if (btnUnlockCancel) btnUnlockCancel.addEventListener('click', () => { if (unlockModal) unlockModal.classList.add('hide'); pendingLoginAttempt = null; });
+  if (btnUnlock) {
+    btnUnlock.addEventListener('click', async () => {
+      const pass = document.getElementById('unlock-pass').value;
+      try {
+        const decrypted = await decryptObject(storedEncryptedPayload, pass);
+        AUTH_USERS = decrypted;
+        credentialsUnlocked = true;
+        if (unlockModal) unlockModal.classList.add('hide');
+        // attempt pending login
+        if (pendingLoginAttempt) {
+          const u = pendingLoginAttempt.username;
+          const p = pendingLoginAttempt.password;
+          pendingLoginAttempt = null;
+          // re-run login verification
+          const userRecord = AUTH_USERS[u];
+          if (!userRecord) { showLoginError('Invalid username or password.'); return; }
+          const hashed = await sha256Hash(p);
+          if (hashed !== userRecord.passwordHash) { showLoginError('Invalid username or password.'); return; }
+          state.currentUser = { username: userRecord.username, displayName: userRecord.displayName, role: userRecord.role };
+          sessionStorage.setItem('skt_session_user', JSON.stringify(state.currentUser));
+          checkSession();
+        }
+      } catch (err) {
+        alert('Failed to unlock credentials. Check passphrase.');
+      }
     });
   }
 
@@ -387,6 +753,8 @@ function setupEventListeners() {
   // --- Reports View Handlers ---
   const btnGen = document.getElementById("btn-generate-report");
   if (btnGen) btnGen.addEventListener("click", () => renderCustomReport());
+  const btnExport = document.getElementById("btn-export-report");
+  if (btnExport) btnExport.addEventListener("click", () => exportReportToExcel());
 }
 
 // ==================== TAB SWITCHER ====================
@@ -415,8 +783,7 @@ function switchTab(tabId) {
     billing: { title: "Billing Desk", subtitle: "Create customer transactions and print invoices." },
     history: { title: "Sales History", subtitle: "Search and review generated invoices." },
     inventory: { title: "Inventory Manager", subtitle: "Maintain store products, price lists, and stock levels." },
-    reports: { title: "Report Management", subtitle: "View income, profit and loss for selected periods." },
-    finance: { title: "Finance Admin", subtitle: "Deep income, profit and loss analytics." }
+    reports: { title: "Report Management", subtitle: "View income, profit and loss for selected periods." }
   };
 
   const header = titleMap[tabId];
@@ -439,12 +806,6 @@ function switchTab(tabId) {
   } else if (tabId === "reports") {
     // render reports when opening the tab
     renderAllReports();
-  } else if (tabId === "finance") {
-    if (state.currentUser && state.currentUser.role === "finance") {
-      renderFinanceReport();
-    } else {
-      switchTab("dashboard");
-    }
   }
 }
 
@@ -828,7 +1189,7 @@ async function checkoutCart() {
   const invoiceObj = {
     id: invoiceId,
     date: invoiceDate,
-    cashier: state.currentUser || "Admin",
+    cashier: state.currentUser?.displayName || "Admin",
     customer: {
       name: custName,
       phone: custPhone
@@ -1406,6 +1767,45 @@ function renderAllReports() {
   startEl.value = defaultStart.toISOString().split('T')[0];
   endEl.value = defaultEnd.toISOString().split('T')[0];
   renderCustomReport();
+}
+
+function exportReportToExcel() {
+  const rows = [];
+  const tableRows = document.querySelectorAll('#report-table-body tr');
+  const now = new Date();
+  const reportName = `SKT-report-${now.toISOString().slice(0,10)}`;
+
+  // Add header row
+  rows.push(['Invoice ID', 'Date', 'Customer', 'Net Total', 'Profit/Loss']);
+
+  tableRows.forEach(row => {
+    const cells = row.querySelectorAll('td');
+    if (cells.length === 0) return;
+    rows.push([
+      cells[0].innerText.trim(),
+      cells[1].innerText.trim(),
+      cells[2].innerText.trim(),
+      cells[3].innerText.trim(),
+      cells[4].innerText.trim()
+    ]);
+  });
+
+  if (rows.length <= 1) {
+    alert('No report data available to export. Please generate a report first.');
+    return;
+  }
+
+  const csvContent = rows.map(r => r.map(cell => `"${cell.replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', `${reportName}.csv`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
 
 function renderFinanceReport() {

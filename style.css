@@ -302,12 +302,33 @@ body {
   color: var(--text-muted);
   font-size: 1rem;
 }
+.toggle-password {
+  position: absolute;
+  right: 0.875rem;
+  background: none;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 0.25rem;
+  transition: color var(--transition-fast);
+  z-index: 10;
+}
+.toggle-password:hover {
+  color: var(--text-secondary);
+}
+.toggle-text {
+  font-weight: 700;
+  color: var(--primary);
+  font-size: 0.85rem;
+}
 .input-wrapper input,
 .form-group input,
 .form-group select {
   width: 100%;
   padding: 0.75rem 1rem;
   padding-left: 2.5rem;
+  padding-right: 2.5rem;
   border-radius: var(--radius-sm);
   border: 1px solid var(--panel-border);
   background-color: var(--bg-secondary);
@@ -361,6 +382,133 @@ body {
   margin-top: 1.5rem;
   font-size: 0.875rem;
   color: var(--text-muted);
+}
+
+/* ==================== LOGIN SCREEN ==================== */
+.auth-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 1.5rem;
+}
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background-color: var(--panel-bg);
+  backdrop-filter: var(--backdrop-blur);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-lg);
+  padding: 2.5rem;
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+  animation: slideIn 0.5s ease-out;
+}
+.auth-header {
+  margin-bottom: 2rem;
+}
+.brand-logo-img {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 1.25rem;
+  border-radius: 20px;
+  object-fit: cover;
+  box-shadow: 0 8px 20px rgba(30, 58, 138, 0.3);
+  border: 2px solid var(--secondary);
+  display: block;
+}
+.auth-header h1 {
+  font-family: var(--font-brand);
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  margin-bottom: 0.25rem;
+}
+.auth-header p {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.auth-form {
+  text-align: left;
+}
+.form-group {
+  margin-bottom: 1.25rem;
+}
+.form-group label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+  color: var(--text-secondary);
+}
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.input-icon {
+  position: absolute;
+  left: 0.875rem;
+  color: var(--text-muted);
+  font-size: 1rem;
+}
+.toggle-password {
+  position: absolute;
+  right: 0.875rem;
+  background: none;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 0.25rem;
+  transition: color var(--transition-fast);
+  z-index: 10;
+}
+.toggle-password:hover {
+  color: var(--text-secondary);
+}
+.input-wrapper input,
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  padding-left: 2.5rem;
+  padding-right: 2.5rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--panel-border);
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  font-family: var(--font-primary);
+  font-size: 0.875rem;
+  outline: none;
+  transition: all var(--transition-fast);
+}
+.form-group input:not(.input-wrapper input),
+.form-group select {
+  padding-left: 1rem;
+}
+.input-wrapper input:focus,
+.form-group input:focus,
+.form-group select:focus {
+  border-color: var(--primary);
+  background-color: var(--panel-bg);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+.error-msg {
+  color: var(--danger);
+  background-color: var(--danger-light);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  padding: 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  margin-top: 1rem;
+  text-align: center;
+}
+.hide {
+  display: none !important;
 }
 
 /* ==================== MAIN PANEL APP LAYOUT ==================== */
@@ -1130,6 +1278,15 @@ body {
   flex-direction: column;
   overflow: hidden;
 }
+.modal-content {
+  background-color: #ffffff;
+  color: #1e293b;
+  width: 100%;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 2rem;
+  animation: slideIn 0.3s ease-out;
+}
 .modal-header-actions {
   display: flex;
   justify-content: flex-end;
@@ -1137,6 +1294,17 @@ body {
   padding: 1rem 1.5rem;
   background-color: #f8fafc;
   border-bottom: 1px solid #e2e8f0;
+}
+.btn-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: color var(--transition-fast);
+}
+.btn-close:hover {
+  color: var(--text-primary);
 }
 
 /* Print Area Specific (Matches standard receipt invoice layouts) */

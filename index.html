@@ -17,10 +17,40 @@
   <div class="bg-glow bg-glow-1"></div>
   <div class="bg-glow bg-glow-2"></div>
 
-  <!-- Login removed — app runs in single-user admin mode -->
+  <!-- LOGIN SCREEN -->
+  <div id="login-container" class="auth-wrapper">
+    <div class="auth-card">
+      <img src="skt_logo.png" alt="Sai Krishna Textiles" class="brand-logo-img">
+      <div class="auth-header">
+        <h1>Sign In</h1>
+        <p>Secure access for admin and staff users.</p>
+      </div>
+      <form id="login-form" class="auth-form">
+        <div class="form-group">
+          <label for="login-username">Username</label>
+          <div class="input-wrapper">
+            <span class="input-icon">👤</span>
+            <input id="login-username" type="text" autocomplete="username" required placeholder="Enter username">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="login-password">Password</label>
+          <div class="input-wrapper">
+            <span class="input-icon">🔒</span>
+            <input id="login-password" type="password" autocomplete="current-password" required placeholder="Enter password">
+            <button type="button" class="toggle-password" data-target="login-password" title="Toggle password visibility"><span class="toggle-text">Show</span></button>
+          </div>
+        </div>
+        <div class="form-group">
+          <button type="submit" class="btn btn-primary btn-block btn-lg">Sign In</button>
+        </div>
+        <div id="login-error" class="error-msg hide"></div>
+      </form>
+    </div>
+  </div>
 
   <!-- ==================== MAIN APPLICATION ==================== -->
-  <div id="app-container" class="app-wrapper">
+  <div id="app-container" class="app-wrapper hide">
     
     <!-- SIDEBAR -->
     <aside class="sidebar">
@@ -54,10 +84,13 @@
         <div class="user-info">
           <span class="user-avatar">👤</span>
           <div>
-            <h4 id="logged-user-name">Cashier</h4>
+            <h4 id="logged-user-name">Admin</h4>
             <p>Active Session</p>
           </div>
         </div>
+        <button id="btn-settings" class="btn-logout" title="Settings">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m2.12 2.12l4.24 4.24M1 12h6m6 0h6M4.22 19.78l4.24-4.24m2.12-2.12l4.24-4.24M19.78 19.78l-4.24-4.24m-2.12-2.12l-4.24-4.24"></path></svg>
+        </button>
         <button id="btn-logout" class="btn-logout" title="Sign Out">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
         </button>
@@ -208,6 +241,7 @@
                 <input type="date" id="report-start" class="input-inline">
                 <input type="date" id="report-end" class="input-inline">
                 <button id="btn-generate-report" class="btn btn-primary btn-sm">Generate</button>
+                <button id="btn-export-report" class="btn btn-secondary btn-sm">Export Excel</button>
               </div>
               <div class="report-grid" style="margin-top:1rem">
                 <div class="report-card">
@@ -226,7 +260,10 @@
             </div>
 
             <div class="panel" style="margin-top:1rem">
-              <h4>Invoice Summary</h4>
+              <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center; gap:1rem;">
+                <h4>Invoice Summary</h4>
+                <span class="text-muted" style="font-size:0.9rem;">Use Export Excel to download the current report table.</span>
+              </div>
               <div class="table-container">
                 <table class="data-table">
                   <thead>
@@ -240,75 +277,6 @@
                   </thead>
                   <tbody id="report-table-body">
                     <tr><td colspan="5" class="text-center text-muted">Select a custom range and generate report.</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- === FINANCE ADMIN TAB === -->
-        <section id="tab-finance" class="tab-pane">
-          <div class="panel">
-            <div class="panel-header">
-              <h3>Finance Admin Dashboard</h3>
-            </div>
-
-            <div class="report-section">
-              <div class="report-grid">
-                <div class="report-card">
-                  <p class="report-label">Net Income</p>
-                  <h2 id="finance-income">₹0.00</h2>
-                </div>
-                <div class="report-card">
-                  <p class="report-label">Net Profit</p>
-                  <h2 id="finance-profit">₹0.00</h2>
-                </div>
-                <div class="report-card">
-                  <p class="report-label">Net Loss</p>
-                  <h2 id="finance-loss">₹0.00</h2>
-                </div>
-                <div class="report-card">
-                  <p class="report-label">Avg Margin</p>
-                  <h2 id="finance-margin">0%</h2>
-                </div>
-              </div>
-            </div>
-
-            <div class="report-section">
-              <h4>Product Profit Breakdown</h4>
-              <div class="table-container">
-                <table class="data-table">
-                  <thead>
-                    <tr>
-                      <th>Product</th>
-                      <th>Qty Sold</th>
-                      <th>Revenue</th>
-                      <th>Cost</th>
-                      <th>Profit</th>
-                    </tr>
-                  </thead>
-                  <tbody id="finance-product-table-body">
-                    <tr><td colspan="5" class="text-center text-muted">No sales data available.</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div class="report-section" style="margin-top:1rem">
-              <h4>Category Profit Summary</h4>
-              <div class="table-container">
-                <table class="data-table">
-                  <thead>
-                    <tr>
-                      <th>Category</th>
-                      <th>Revenue</th>
-                      <th>Cost</th>
-                      <th>Profit</th>
-                    </tr>
-                  </thead>
-                  <tbody id="finance-category-table-body">
-                    <tr><td colspan="4" class="text-center text-muted">No category data available.</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -613,7 +581,7 @@
           <div>
             <p><strong>Invoice No:</strong> <span id="inv-id">SKT-2026-0001</span></p>
             <p><strong>Date & Time:</strong> <span id="inv-date">05/06/2026 11:00 AM</span></p>
-            <p><strong>Cashier:</strong> <span id="inv-cashier">Admin</span></p>
+            <p><strong>Processed by:</strong> <span id="inv-cashier">Admin</span></p>
           </div>
           <div class="text-right">
             <p><strong>Customer Details:</strong></p>
@@ -694,6 +662,79 @@
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore-compat.js"></script>
+
+  <!-- SETTINGS MODAL -->
+  <div id="settings-modal" class="modal-overlay hide">
+    <div class="modal-content" style="max-width: 500px;">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2 style="margin: 0; font-family: var(--font-brand); font-size: 1.5rem; font-weight: 700;">Change Credentials</h2>
+        <button id="btn-close-settings" class="btn-close" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted);">&times;</button>
+      </div>
+      <form id="settings-form" style="text-align: left;">
+        <div class="form-group">
+          <label for="settings-new-username">New Username</label>
+          <input id="settings-new-username" type="text" placeholder="Enter new username" required>
+        </div>
+        <div class="form-group">
+          <label for="settings-new-password">New Password</label>
+          <div class="input-wrapper">
+            <input id="settings-new-password" type="password" placeholder="Enter new password" required>
+            <button type="button" class="toggle-password" data-target="settings-new-password" title="Toggle password visibility"><span class="toggle-text">Show</span></button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="settings-confirm-password">Confirm Password</label>
+          <div class="input-wrapper">
+            <input id="settings-confirm-password" type="password" placeholder="Confirm new password" required>
+            <button type="button" class="toggle-password" data-target="settings-confirm-password" title="Toggle password visibility"><span class="toggle-text">Show</span></button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="secure-storage-toggle">Secure Storage</label>
+          <div style="display:flex; gap:0.5rem; align-items:center;">
+            <input id="secure-storage-toggle" type="checkbox">
+            <label for="secure-storage-toggle" style="margin:0">Enable encrypted storage (requires master passphrase)</label>
+          </div>
+          <div id="secure-passfields" class="hide" style="margin-top:0.75rem;">
+            <div class="input-wrapper" style="margin-bottom:0.5rem;">
+              <input id="secure-pass" type="password" placeholder="Enter master passphrase">
+              <button type="button" class="toggle-password" data-target="secure-pass" title="Toggle passphrase visibility"><span class="toggle-text">Show</span></button>
+            </div>
+            <div class="input-wrapper">
+              <input id="secure-pass-confirm" type="password" placeholder="Confirm master passphrase">
+              <button type="button" class="toggle-password" data-target="secure-pass-confirm" title="Toggle passphrase visibility"><span class="toggle-text">Show</span></button>
+            </div>
+          </div>
+        </div>
+        <div id="settings-error" class="error-msg hide" style="margin-bottom: 1rem;"></div>
+        <div style="display: flex; gap: 0.75rem;">
+          <button type="submit" class="btn btn-primary btn-sm" style="flex: 1;">Save Changes</button>
+          <button type="button" id="btn-cancel-settings" class="btn btn-outline btn-sm" style="flex: 1;">Cancel</button>
+        </div>
+      </form>
+      <p style="margin-top: 1rem; font-size: 0.85rem; color: var(--text-muted);">⚠️ After changing credentials, you will need to log in again with your new username and password.</p>
+    </div>
+  </div>
+
+  <!-- UNLOCK MASTER PASSPHRASE MODAL -->
+  <div id="unlock-modal" class="modal-overlay hide">
+    <div class="modal-content" style="max-width:420px;">
+      <div class="modal-header" style="margin-bottom:1rem;">
+        <h3 style="margin:0; font-family:var(--font-brand);">Unlock Secure Credentials</h3>
+      </div>
+      <div style="margin-bottom:0.75rem;">
+        <p style="margin:0 0 0.5rem 0; color:var(--text-secondary);">Enter your master passphrase to unlock stored credentials.</p>
+        <div class="input-wrapper">
+          <input id="unlock-pass" type="password" placeholder="Master passphrase">
+          <button type="button" class="toggle-password" data-target="unlock-pass" title="Toggle passphrase visibility"><span class="toggle-text">Show</span></button>
+        </div>
+      </div>
+      <div style="display:flex; gap:0.5rem;">
+        <button id="btn-unlock" class="btn btn-primary btn-sm">Unlock</button>
+        <button id="btn-unlock-cancel" class="btn btn-outline btn-sm">Cancel</button>
+      </div>
+    </div>
+  </div>
 
   <!-- JavaScript App Logic -->
   <script src="app.js"></script>
