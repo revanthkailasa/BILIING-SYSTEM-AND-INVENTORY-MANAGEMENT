@@ -34,12 +34,16 @@ let state = {
 async function loadStoredCredentials() {
   try {
     const payload = await loadFromIndexedDB();
-    if (payload) {
+    if (payload && payload.salt && payload.iv && payload.data) {
       credentialsEncrypted = true;
       storedEncryptedPayload = payload;
       AUTH_USERS = {};
       try { localStorage.removeItem('skt_admin_credentials_enc'); } catch (e) {}
       return;
+    } else if (payload) {
+      // Invalid IndexedDB payload, clear it
+      await clearFromIndexedDB();
+      console.warn('Cleared invalid IndexedDB encrypted credentials');
     }
   } catch (err) {
     console.warn('IndexedDB load failed, falling back to localStorage');
@@ -48,13 +52,20 @@ async function loadStoredCredentials() {
   const enc = localStorage.getItem('skt_admin_credentials_enc');
   if (enc) {
     try {
-      storedEncryptedPayload = JSON.parse(enc);
-      credentialsEncrypted = true;
-      AUTH_USERS = {};
-      return;
+      const parsed = JSON.parse(enc);
+      if (parsed.salt && parsed.iv && parsed.data) {
+        storedEncryptedPayload = parsed;
+        credentialsEncrypted = true;
+        AUTH_USERS = {};
+        return;
+      } else {
+        throw new Error('Invalid payload structure');
+      }
     } catch (e) {
       console.warn('Invalid encrypted credential payload in localStorage, clearing stale data');
       try { localStorage.removeItem('skt_admin_credentials_enc'); } catch (err) {}
+      credentialsEncrypted = false;
+      storedEncryptedPayload = null;
     }
   }
 
@@ -74,6 +85,7 @@ async function loadStoredCredentials() {
     credentialsUnlocked = true; // Allow access without unlock modal on first load
   }
 }
+
 
 // IndexedDB credential storage helpers
 async function openCredentialsDB() {
@@ -229,6 +241,9 @@ async function secureApiCall(url, options = {}) {
 
 // ==================== INITIALIZATION ====================
 document.addEventListener("DOMContentLoaded", async () => {
+  // Clean up any stale/invalid encrypted credential data before loading
+  await cleanupStaleEncryptedData();
+  
   await loadStoredCredentials();
   await initStorage();
 
@@ -241,6 +256,28 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupEventListeners();
   startClock();
 });
+
+// Clean up stale encrypted credential data (handles browser cache from old deployments)
+async function cleanupStaleEncryptedData() {
+  // Clean up invalid localStorage encrypted data
+  try {
+    const enc = localStorage.getItem('skt_admin_credentials_enc');
+    if (enc) {
+      try {
+        const parsed = JSON.parse(enc);
+        if (!parsed.salt || !parsed.iv || !parsed.data) {
+          localStorage.removeItem('skt_admin_credentials_enc');
+          console.warn('Cleared invalid localStorage encrypted credentials');
+        }
+      } catch (e) {
+        localStorage.removeItem('skt_admin_credentials_enc');
+        console.warn('Cleared malformed localStorage encrypted credentials');
+      }
+    }
+  } catch (e) {
+    // Continue
+  }
+}
 
 async function initStorage() {
   const savedProducts = localStorage.getItem("skt_products");
