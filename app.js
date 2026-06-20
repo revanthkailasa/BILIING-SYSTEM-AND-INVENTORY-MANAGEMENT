@@ -67,6 +67,11 @@ async function loadStoredCredentials() {
       try { localStorage.removeItem('skt_admin_credentials'); } catch (err) {}
       AUTH_USERS = { ...DEFAULT_AUTH_USERS };
     }
+  } else {
+    // No stored credentials found - use defaults (fresh deployment)
+    AUTH_USERS = { ...DEFAULT_AUTH_USERS };
+    credentialsEncrypted = false;
+    credentialsUnlocked = true; // Allow access without unlock modal on first load
   }
 }
 
