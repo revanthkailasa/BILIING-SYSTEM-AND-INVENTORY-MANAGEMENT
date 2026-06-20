@@ -9,7 +9,7 @@ const DEFAULT_PRODUCTS = [
 
 // ==================== SECURITY / AUTH ====================
 const DEFAULT_AUTH_USERS = {
-  SAIKRISHNA: {
+  saikrishna: {
     username: 'SAIKRISHNA',
     displayName: 'Administrator',
     role: 'admin',
