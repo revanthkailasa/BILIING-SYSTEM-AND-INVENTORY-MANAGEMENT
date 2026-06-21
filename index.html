@@ -8,6 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Stylesheet -->
   <link rel="stylesheet" href="style.css">
 </head>
@@ -29,20 +31,20 @@
         <div class="form-group">
           <label for="login-username">Username</label>
           <div class="input-wrapper">
-            <span class="input-icon">👤</span>
+            <i class="input-icon fas fa-user"></i>
             <input id="login-username" type="text" autocomplete="username" required placeholder="Enter username">
           </div>
         </div>
         <div class="form-group">
           <label for="login-password">Password</label>
           <div class="input-wrapper">
-            <span class="input-icon">🔒</span>
+            <i class="input-icon fas fa-lock"></i>
             <input id="login-password" type="password" autocomplete="current-password" required placeholder="Enter password">
             <button type="button" class="toggle-password" data-target="login-password" title="Toggle password visibility"><span class="toggle-text">Show</span></button>
           </div>
         </div>
         <div class="form-group">
-          <button type="submit" class="btn btn-primary btn-block btn-lg">Sign In</button>
+          <button type="submit" class="btn btn-primary btn-block btn-lg"><i class="fas fa-sign-in-alt"></i> Sign In</button>
         </div>
         <div id="login-error" class="error-msg hide"></div>
       </form>
@@ -64,35 +66,35 @@
 
       <nav class="sidebar-menu">
         <button class="menu-item active" data-tab="dashboard">
-          <span class="menu-icon">📊</span> Dashboard
+          <i class="menu-icon fas fa-chart-line"></i> Dashboard
         </button>
         <button class="menu-item" data-tab="billing">
-          <span class="menu-icon">💳</span> Billing Desk
+          <i class="menu-icon fas fa-cash-register"></i> Billing Desk
         </button>
         <button class="menu-item" data-tab="history">
-          <span class="menu-icon">📜</span> Sales History
+          <i class="menu-icon fas fa-history"></i> Sales History
         </button>
         <button class="menu-item" data-tab="reports">
-          <span class="menu-icon">📈</span> Report Management
+          <i class="menu-icon fa-solid fa-chart-line"></i> Report Management
         </button>
         <button class="menu-item" data-tab="inventory">
-          <span class="menu-icon">📦</span> Inventory
+          <i class="menu-icon fas fa-boxes"></i> Inventory
         </button>
       </nav>
 
       <div class="sidebar-user">
         <div class="user-info">
-          <span class="user-avatar">👤</span>
+          <span class="user-avatar"><i class="fas fa-user-circle"></i></span>
           <div>
             <h4 id="logged-user-name">Admin</h4>
             <p>Active Session</p>
           </div>
         </div>
         <button id="btn-settings" class="btn-logout" title="Settings">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m2.12 2.12l4.24 4.24M1 12h6m6 0h6M4.22 19.78l4.24-4.24m2.12-2.12l4.24-4.24M19.78 19.78l-4.24-4.24m-2.12-2.12l-4.24-4.24"></path></svg>
+          <i class="fas fa-sliders-h"></i>
         </button>
         <button id="btn-logout" class="btn-logout" title="Sign Out">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+          <i class="fas fa-sign-out-alt"></i>
         </button>
       </div>
     </aside>
@@ -108,7 +110,7 @@
         </div>
         <div class="topbar-actions">
           <button id="theme-toggle" class="btn-theme-toggle" title="Toggle Theme">
-            <span class="mode-icon">🌙</span>
+            <i class="mode-icon fa-solid fa-moon" aria-hidden="true"></i>
           </button>
           <div class="live-clock" id="live-clock">00:00:00 AM</div>
         </div>
@@ -122,28 +124,28 @@
           <!-- Stats Grid -->
           <div class="stats-grid">
             <div class="stat-card card-primary">
-              <div class="stat-icon">₹</div>
+              <div class="stat-icon"><i class="fas fa-indian-rupee-sign"></i></div>
               <div class="stat-content">
                 <p class="stat-label">Today's Revenue</p>
                 <h3 id="stat-revenue" class="stat-value">₹0.00</h3>
               </div>
             </div>
             <div class="stat-card card-secondary">
-              <div class="stat-icon">📄</div>
+              <div class="stat-icon"><i class="fas fa-receipt"></i></div>
               <div class="stat-content">
                 <p class="stat-label">Bills Generated</p>
                 <h3 id="stat-bills-count" class="stat-value">0</h3>
               </div>
             </div>
             <div class="stat-card card-warning">
-              <div class="stat-icon">🛍️</div>
+              <div class="stat-icon"><i class="fas fa-shopping-bag"></i></div>
               <div class="stat-content">
                 <p class="stat-label">Items Sold</p>
                 <h3 id="stat-items-sold" class="stat-value">0</h3>
               </div>
             </div>
             <div class="stat-card card-info">
-              <div class="stat-icon">⚠️</div>
+              <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
               <div class="stat-content">
                 <p class="stat-label">Low Stock items</p>
                 <h3 id="stat-low-stock" class="stat-value">0</h3>
@@ -157,7 +159,7 @@
             <div class="panel list-panel">
               <div class="panel-header">
                 <h3>Recent Billing Transactions</h3>
-                <button class="btn btn-sm btn-outline" onclick="switchTab('history')">View All</button>
+                <button class="btn btn-sm btn-outline" onclick="switchTab('history')"><i class="fas fa-eye"></i> View All</button>
               </div>
               <div class="table-container">
                 <table class="data-table">
@@ -240,8 +242,8 @@
               <div class="report-controls flex-gap">
                 <input type="date" id="report-start" class="input-inline">
                 <input type="date" id="report-end" class="input-inline">
-                <button id="btn-generate-report" class="btn btn-primary btn-sm">Generate</button>
-                <button id="btn-export-report" class="btn btn-secondary btn-sm">Export Excel</button>
+                <button type="button" id="btn-generate-report" class="btn btn-primary btn-sm"><i class="fas fa-redo"></i> Generate</button>
+                <button type="button" id="btn-export-report" class="btn btn-secondary btn-sm"><i class="fas fa-download"></i> Export Excel</button>
               </div>
               <div class="report-grid" style="margin-top:1rem">
                 <div class="report-card">
@@ -299,7 +301,7 @@
                 <div class="search-filter-row">
                   <div class="search-box-wrapper">
                     <input type="text" id="billing-search-product" placeholder="Search product by name or barcode...">
-                    <span class="search-icon">🔍</span>
+                    <i class="search-icon fas fa-search"></i>
                   </div>
                   <select id="billing-category-filter" class="category-select">
                     <option value="">All Categories</option>
@@ -353,9 +355,9 @@
                   <h3>Shopping Cart</h3>
                   <div class="cart-header-actions">
                     <button id="btn-checkout" class="btn btn-primary btn-sm" disabled>
-                      Generate Invoice & Print
+                      <i class="fas fa-print"></i> Generate Invoice & Print
                     </button>
-                    <button id="btn-clear-cart" class="btn btn-sm btn-outline-danger">Clear Cart</button>
+                    <button id="btn-clear-cart" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash-alt"></i> Clear Cart</button>
                   </div>
                 </div>
                 
@@ -420,7 +422,7 @@
               <div class="history-filters flex-gap">
                 <input type="text" id="search-history" placeholder="Search by Invoice ID, Customer Mobile/Name...">
                 <input type="date" id="search-history-date">
-                <button id="btn-reset-filters" class="btn btn-outline btn-sm">Clear Filters</button>
+                <button id="btn-reset-filters" class="btn btn-outline btn-sm"><i class="fas fa-redo"></i> Clear Filters</button>
               </div>
             </div>
             
@@ -459,7 +461,7 @@
                   <h3>Products Stock List</h3>
                   <div class="search-box-wrapper width-auto">
                     <input type="text" id="inventory-search" placeholder="Search stock...">
-                    <span class="search-icon">🔍</span>
+                    <i class="search-icon fas fa-search"></i>
                   </div>
                 </div>
 
@@ -540,8 +542,8 @@
                   </div>
 
                   <div class="form-actions-row">
-                    <button type="button" id="btn-reset-prod-form" class="btn btn-outline">Cancel</button>
-                    <button type="submit" id="btn-save-product" class="btn btn-primary">Save Product</button>
+                    <button type="button" id="btn-reset-prod-form" class="btn btn-outline"><i class="fas fa-times"></i> Cancel</button>
+                    <button type="submit" id="btn-save-product" class="btn btn-primary"><i class="fas fa-save"></i> Save Product</button>
                   </div>
                 </form>
               </div>
@@ -557,10 +559,10 @@
   <div id="invoice-modal-overlay" class="modal-overlay hide">
     <div class="invoice-modal-card">
       <div class="modal-header-actions no-print">
-        <button id="btn-print-invoice" type="button" class="btn btn-primary">🖨️ Print Invoice</button>
-        <button id="btn-add-invoice-item" type="button" class="btn btn-outline btn-sm">➕ Add Item</button>
-        <button id="btn-cancel-invoice" type="button" class="btn btn-outline-danger">🚫 Cancel Invoice</button>
-        <button id="btn-close-invoice" type="button" class="btn btn-outline">❌ Close</button>
+        <button id="btn-print-invoice" type="button" class="btn btn-primary"><i class="fas fa-print"></i> Print Invoice</button>
+        <button id="btn-add-invoice-item" type="button" class="btn btn-outline btn-sm"><i class="fas fa-plus"></i> Add Item</button>
+        <button id="btn-cancel-invoice" type="button" class="btn btn-outline-danger"><i class="fas fa-ban"></i> Cancel Invoice</button>
+        <button id="btn-close-invoice" type="button" class="btn btn-outline"><i class="fas fa-times"></i> Close</button>
       </div>
 
       <!-- INVOICE TEMPLATE (Optimized for Printing) -->
@@ -569,8 +571,8 @@
           <h1 class="store-name">SAI KRISHNA TEXTILES</h1>
           <p class="store-tagline">Exquisite Sarees, Fabrics & Family Readymades</p>
           <p class="store-details">
-            Door No. 12-45/A, Main Bazar, Textiles Complex, Sai Nagar<br>
-            Phone: +91 98765 43210 | Email: saikrishnatextiles@gmail.com<br>
+            Gromor Complex, Backside of ICICI Bank, Sai Nagar<br>
+            Phone: 9533873636 | Email: saikrishnatextiles@gmail.com<br>
             <strong>GSTIN: 37AAAAA0000A1Z2</strong>
           </p>
         </div>
@@ -708,8 +710,8 @@
         </div>
         <div id="settings-error" class="error-msg hide" style="margin-bottom: 1rem;"></div>
         <div style="display: flex; gap: 0.75rem;">
-          <button type="submit" class="btn btn-primary btn-sm" style="flex: 1;">Save Changes</button>
-          <button type="button" id="btn-cancel-settings" class="btn btn-outline btn-sm" style="flex: 1;">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm" style="flex: 1;"><i class="fas fa-check"></i> Save Changes</button>
+          <button type="button" id="btn-cancel-settings" class="btn btn-outline btn-sm" style="flex: 1;"><i class="fas fa-times"></i> Cancel</button>
         </div>
       </form>
       <p style="margin-top: 1rem; font-size: 0.85rem; color: var(--text-muted);">⚠️ After changing credentials, you will need to log in again with your new username and password.</p>
@@ -730,8 +732,8 @@
         </div>
       </div>
       <div style="display:flex; gap:0.5rem;">
-        <button id="btn-unlock" class="btn btn-primary btn-sm">Unlock</button>
-        <button id="btn-unlock-cancel" class="btn btn-outline btn-sm">Cancel</button>
+        <button id="btn-unlock" class="btn btn-primary btn-sm"><i class="fas fa-lock-open"></i> Unlock</button>
+        <button id="btn-unlock-cancel" class="btn btn-outline btn-sm"><i class="fas fa-times"></i> Cancel</button>
       </div>
     </div>
   </div>

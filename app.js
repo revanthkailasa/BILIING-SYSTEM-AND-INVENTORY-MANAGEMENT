@@ -510,11 +510,17 @@ function setupEventListeners() {
     if (isLight) {
       body.classList.remove("light-mode");
       body.classList.add("dark-mode");
-      icon.innerText = "☀️";
+      if (icon) {
+        icon.classList.remove("fa-moon");
+        icon.classList.add("fa-sun");
+      }
     } else {
       body.classList.remove("dark-mode");
       body.classList.add("light-mode");
-      icon.innerText = "🌙";
+      if (icon) {
+        icon.classList.remove("fa-sun");
+        icon.classList.add("fa-moon");
+      }
     }
   });
 
@@ -744,9 +750,12 @@ function setupEventListeners() {
   document.getElementById("btn-close-invoice").addEventListener("click", () => {
     document.getElementById("invoice-modal-overlay").classList.add("hide");
   });
-  document.getElementById("btn-print-invoice").addEventListener("click", () => {
-    window.print();
-  });
+  const btnPrintInvoice = document.getElementById("btn-print-invoice");
+  if (btnPrintInvoice) {
+    btnPrintInvoice.addEventListener("click", () => {
+      printInvoicePreview();
+    });
+  }
   const btnAddInvoiceItem = document.getElementById("btn-add-invoice-item");
   if (btnAddInvoiceItem) {
     btnAddInvoiceItem.addEventListener("click", () => {
@@ -796,7 +805,11 @@ function setupEventListeners() {
   const btnGen = document.getElementById("btn-generate-report");
   if (btnGen) btnGen.addEventListener("click", () => renderCustomReport());
   const btnExport = document.getElementById("btn-export-report");
-  if (btnExport) btnExport.addEventListener("click", () => exportReportToExcel());
+  if (btnExport) {
+    btnExport.addEventListener("click", () => exportReportToExcel());
+  } else {
+    console.warn('Export button not found in DOM.');
+  }
 }
 
 // ==================== TAB SWITCHER ====================
@@ -1292,13 +1305,32 @@ function showInvoicePreview(invoice) {
       <td class="text-center">${item.qty}</td>
       <td class="text-center">${item.gstRate}%</td>
       <td class="text-right">${formatCurrency(item.totalAmount)}</td>
-      <td class="text-right no-print">
-        ${invoice.status !== 'cancelled' ? `
-          <button class="btn btn-outline btn-sm" onclick="replaceInvoiceItem('${invoice.id}','${item.id}')" title="Replace Item">🔁 Replace</button>
-          <button class="btn btn-outline btn-sm" onclick="removeInvoiceItem('${invoice.id}','${item.id}')" title="Remove Item">🗑️ Remove</button>
-        ` : ''}
-      </td>
     `;
+
+    const actionCell = document.createElement('td');
+    actionCell.className = 'text-right no-print';
+
+    if (invoice.status !== 'cancelled') {
+      const replaceButton = document.createElement('button');
+      replaceButton.className = 'btn btn-outline btn-sm';
+      replaceButton.type = 'button';
+      replaceButton.title = 'Replace Item';
+      replaceButton.innerHTML = '<i class="fas fa-exchange-alt"></i> Replace';
+      replaceButton.addEventListener('click', () => replaceInvoiceItem(invoice.id, item.id));
+
+      const removeButton = document.createElement('button');
+      removeButton.className = 'btn btn-outline btn-sm';
+      removeButton.type = 'button';
+      removeButton.title = 'Remove Item';
+      removeButton.innerHTML = '<i class="fas fa-trash-alt"></i> Remove';
+      removeButton.addEventListener('click', () => removeInvoiceItem(invoice.id, item.id));
+
+      actionCell.appendChild(replaceButton);
+      actionCell.appendChild(document.createTextNode(' '));
+      actionCell.appendChild(removeButton);
+    }
+
+    row.appendChild(actionCell);
     body.appendChild(row);
   });
 
@@ -1811,6 +1843,14 @@ function renderAllReports() {
   renderCustomReport();
 }
 
+function printInvoicePreview() {
+  if (typeof window.print === 'function') {
+    window.print();
+    return;
+  }
+  alert('Print is not available in this browser.');
+}
+
 function exportReportToExcel() {
   const rows = [];
   const tableRows = document.querySelectorAll('#report-table-body tr');
@@ -1822,7 +1862,7 @@ function exportReportToExcel() {
 
   tableRows.forEach(row => {
     const cells = row.querySelectorAll('td');
-    if (cells.length === 0) return;
+    if (cells.length < 5) return;
     rows.push([
       cells[0].innerText.trim(),
       cells[1].innerText.trim(),
@@ -1988,8 +2028,8 @@ function renderInventoryTable() {
       <td>${statusBadge}</td>
       <td>
         <div class="flex-gap">
-          <button class="btn btn-outline btn-sm" onclick="editProduct('${p.id}')">✏️ Edit</button>
-          <button class="btn btn-outline-danger btn-sm" onclick="deleteProduct('${p.id}')">🗑️ Delete</button>
+          <button class="btn btn-outline btn-sm" onclick="editProduct('${p.id}')"><i class="fas fa-edit"></i> Edit</button>
+          <button class="btn btn-outline-danger btn-sm" onclick="deleteProduct('${p.id}')"><i class="fas fa-trash-alt"></i> Delete</button>
         </div>
       </td>
     `;
